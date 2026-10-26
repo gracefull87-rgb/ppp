@@ -41,7 +41,8 @@
 ### Supabase 운영 체크리스트
 - [ ] Authentication > Sign In / Providers: **Allow new users to sign up 끄기** (계정은 관리자가 발급)
 - [ ] 비밀번호 최소 길이 강화(예: 10자 이상), 유출 비밀번호 차단(요금제에 따라 제공) [확인 필요]
-- [ ] **service_role / secret 키는 앱·저장소·메신저에 절대 넣지 않는다** (RLS 우회 키)
+- [ ] **service_role / secret 키는 앱·저장소·메신저·Vercel 환경변수에 절대 넣지 않는다** (RLS 우회 키). `scripts/build-config.cjs` 가 이런 키를 감지하면 배포를 실패시킨다
+- [ ] 공개 키는 Vercel 환경변수(`SUPABASE_URL`, `SUPABASE_ANON_KEY`)로 관리하고 저장소의 `js/config.js` 는 비워 둔다
 - [ ] 관리자 계정은 최소 인원(1~2명), 퇴사자 계정은 즉시 `active=false`
 - [ ] Database > Backups 설정 확인(요금제별 보존기간 다름) [확인 필요]
 - [ ] 프로젝트 리전·국외 이전 해당 여부를 기관 개인정보보호 담당자와 확인 [확인 필요]

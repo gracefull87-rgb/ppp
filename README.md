@@ -68,13 +68,28 @@ where id = (select id from auth.users where email = 'staff1@기관도메인');
 > `display_name` 은 담당자 목록·수정 이력·종결 검토에 표시되는 이름입니다.
 
 ### 4) 앱에 연결
-**Project Settings > API** 의 *Project URL* 과 *anon public* 키를 `js/config.js` 에 입력하고 커밋·배포합니다.
+Supabase **Project Settings > API Keys** 에서 *Project URL* 과 공개 키를 확인합니다.
+공개 키는 **anon public**(`eyJ…`, Legacy API keys 탭) 또는 **Publishable key**(`sb_publishable_…`) 중 하나를 쓰면 됩니다.
+
+**방법 A — Vercel 환경변수 (권장, 키가 저장소에 남지 않음)**
+1. Vercel 프로젝트 > **Settings > Environment Variables** 에 추가
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_URL` | `https://xxxxxxxx.supabase.co` |
+   | `SUPABASE_ANON_KEY` | anon 또는 Publishable 키 |
+   | `IDLE_MINUTES` (선택) | 자동 로그아웃 시간(분), 기본 30 |
+2. **Deployments > 최신 배포 > Redeploy** (환경변수는 다시 배포해야 반영됩니다)
+3. 배포 시 `scripts/build-config.cjs` 가 `js/config.js` 를 만들어 넣습니다. 저장소의 `js/config.js` 는 비워 둡니다.
+   - 관리자 키(`service_role`, `sb_secret_…`)를 넣거나 값이 하나만 있으면 **배포가 실패**하고 Build Logs 에 이유가 표시됩니다.
+
+**방법 B — `js/config.js` 에 직접 입력** (Vercel 없이 쓰거나 PC에서 `index.html` 을 바로 열 때)
 ```js
 supabaseUrl: 'https://xxxxxxxx.supabase.co',
-supabaseAnonKey: 'eyJhbGciOi...',   // anon(public) 키
+supabaseAnonKey: '공개 키',   // 따옴표 안에 붙여넣기
 ```
-- anon 키는 공개용 키입니다. 데이터는 RLS가 보호하므로 로그인·활성화된 직원만 조회할 수 있습니다.
-- ⚠️ **service_role(또는 secret) 키는 절대 넣지 마세요.** RLS를 무시하는 관리자 키입니다.
+
+- 공개 키는 원래 브라우저에 노출되는 키입니다. 데이터는 RLS가 보호하므로 로그인·활성화된 직원만 조회할 수 있습니다.
+- ⚠️ **service_role(또는 secret) 키는 어느 방법으로도 넣지 마세요.** RLS를 무시하는 관리자 키입니다.
 - 사용자 정의 도메인을 쓰면 `vercel.json` CSP의 `connect-src` 에 그 주소를 추가하세요.
 
 ### 5) 기존 로컬 데이터 옮기기

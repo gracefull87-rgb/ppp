@@ -16,7 +16,7 @@
 - 클래식 `<script>` + 전역 네임스페이스 `window.PPP` — `index.html`을 더블클릭(file://)해도 동작해야 하므로 ES 모듈을 쓰지 않는다.
 - 저장: `PPP.store.adapter` — `js/config.js`가 비어 있으면 `LocalStorageAdapter`, Supabase URL·anon 키가 있으면 `PPP.supa.ServerAdapter`(서버 모드). DATA_MODEL.md §6.
 - 서버: Supabase (Auth + PostgREST, **supabase-js 미사용**, `fetch`로 직접 호출). 스키마·RLS는 `supabase/migrations/*.sql`
-- 배포: Vercel 정적 호스팅 (`vercel.json`에 보안 헤더)
+- 배포: Vercel 정적 호스팅 (`vercel.json`에 보안 헤더, 빌드 명령은 `node scripts/build-config.cjs` 하나 — 외부 패키지 설치 없음)
 - 테스트: Playwright E2E (`node tests/e2e.cjs`, `node tests/e2e-server.cjs`), DB RLS (`bash tests/db/run.sh`)
 
 ## 4. 파일 구조
@@ -38,7 +38,9 @@ tests/e2e.cjs         E2E 스모크 테스트 (로컬 모드)
 tests/e2e-server.cjs  E2E (서버 모드, 가짜 Supabase API)
 tests/db/             RLS 검증 (임시 PostgreSQL + Supabase 최소 환경)
 supabase/migrations/  Supabase 스키마·RLS·트리거
-vercel.json           배포 설정·보안 헤더
+vercel.json           배포 설정(빌드 명령)·보안 헤더
+scripts/build-config.cjs  Vercel 빌드 시 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)로 js/config.js 생성, 관리자 키 차단
+.vercelignore         배포에서 제외(tests/, supabase/)
 ```
 
 ## 5. 코딩 규칙
