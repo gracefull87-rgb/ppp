@@ -45,8 +45,19 @@ npx serve .          # 또는 python3 -m http.server 8080
 2. **Authentication > Sign In / Providers** 에서 *Allow new users to sign up* 을 **끕니다** (계정은 관리자만 발급)
 
 ### 2) 스키마·RLS 적용
-**SQL Editor** 에 `supabase/migrations/20261026000000_init.sql` 전체를 붙여 넣고 실행합니다. (CLI 사용 시 `supabase db push`)
-→ 테이블 7개, RLS 정책, 트리거, 감사로그가 만들어집니다.
+**SQL Editor** 에서 `supabase/migrations/` 의 파일을 **이름 순서대로 한 번씩** 실행합니다. (CLI 사용 시 `supabase db push`)
+1. `20261026000000_init.sql` → 테이블 7개, RLS 정책, 트리거, 감사로그
+2. `20261027000000_backfill_profiles.sql` → 미리 만들어 둔 Auth 계정에도 프로필 생성 (여러 번 실행해도 안전)
+
+**`relation "profiles" already exists` 오류가 나면**
+1. `supabase/manual/check_install.sql` 을 실행해 결과를 확인합니다.
+   | 결과 | 의미 | 할 일 |
+   |---|---|---|
+   | 앱 테이블 수 **7**, 앱용 profiles **true** | 이미 설치되어 있음 (두 번 실행한 경우) | init 은 다시 실행하지 말고 2번 파일(backfill)만 실행 |
+   | 예제(Starter) profiles **true** | 프로젝트 생성 시 예제가 만든 profiles 가 있음 | 아래 초기화 후 다시 설치 |
+2. 초기화(새 프로젝트만): `supabase/manual/reset_fresh_project.sql` 실행 → init → backfill 순서로 다시 실행
+   - 이용자 데이터가 1건이라도 있으면 초기화는 자동으로 중단됩니다.
+3. 마지막으로 `check_install.sql` 결과가 `7 | true | false | 0` 인지 확인합니다.
 
 ### 3) 직원 계정 만들기
 1. **Authentication > Users > Add user** 로 직원 이메일·비밀번호 생성 (*Auto Confirm User* 체크)

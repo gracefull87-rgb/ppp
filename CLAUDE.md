@@ -36,7 +36,8 @@ js/views.js           화면: 대시보드, 참여자, 상세, 서식, 출력, �
 js/app.js             라우터(hash), 글자 크기·익명 모드·현재 사용자
 tests/e2e.cjs         E2E 스모크 테스트 (로컬 모드)
 tests/e2e-server.cjs  E2E (서버 모드, 가짜 Supabase API)
-tests/db/             RLS 검증 (임시 PostgreSQL + Supabase 최소 환경)
+tests/db/             RLS 검증(run.sh), 설치 상황 검증(scenarios.sh) — 임시 PostgreSQL + Supabase 최소 환경
+supabase/manual/      설치 확인(check_install.sql), 새 프로젝트 초기화(reset_fresh_project.sql)
 supabase/migrations/  Supabase 스키마·RLS·트리거
 vercel.json           배포 설정(빌드 명령)·보안 헤더
 scripts/build-config.cjs  Vercel 빌드 시 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)로 js/config.js 생성, 관리자 키 차단
@@ -64,7 +65,7 @@ scripts/build-config.cjs  Vercel 빌드 시 환경변수(SUPABASE_URL, SUPABASE_
 
 ## 7. 완료 기준 (Definition of Done)
 - [ ] `node tests/e2e.cjs`·`node tests/e2e-server.cjs` 전체 통과, 브라우저 콘솔 오류 없음
-- [ ] DB 변경 시 새 마이그레이션 파일 추가(기존 파일 수정 금지) + `bash tests/db/run.sh` 통과
+- [ ] DB 변경 시 새 마이그레이션 파일 추가(기존 파일 수정 금지) + `bash tests/db/run.sh`·`bash tests/db/scenarios.sh` 통과
 - [ ] 새 기능에 대한 E2E 확인 항목 추가
 - [ ] 키보드만으로 기능 수행 가능, 포커스 표시 확인
 - [ ] 1440px(PC)과 390px 폭에서 가로 스크롤 없음
