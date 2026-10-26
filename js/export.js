@@ -11,12 +11,12 @@
   }
 
   function participantRows(incSensitive) {
-    const head = ['참여자 코드', '가명', ...(incSensitive ? ['실명'] : []), '성별', '연령대', '장애유형', '장애정도', '담당자', '상태', '현재 단계', '진행률(%)', '다음 단계', '지원 시작일', '지원 경과(개월)', '보호자 동의', '동의일', '자조활동', '최근 기록일',
+    const head = ['참여자 코드', '가명', ...(incSensitive ? ['실명'] : []), '성별', '연령대', '장애유형', '장애정도', '담당자', '상태', '현재 단계', '진행률(%)', '다음 단계', '지원 시작일', '지원 경과(개월)', '보호자 동의', '동의일', '미래설계서비스이용현황', '최근 기록일',
       ...PPP.STEPS.map((s) => `${s.label} 완료일`)];
     const rows = S().participants().map((p) => {
       const pr = S().progress(p);
       return [p.code, p.alias, ...(incSensitive ? [p.name] : []), p.gender, PPP.ageBand(p.birthYear), p.disabilityType, p.disabilitySeverity, p.manager, STATUS[p.status], pr.stage, pr.pct, pr.next ? pr.next.label : '', p.supportStart, pr.months == null ? '' : pr.months,
-        p.consent.guardian ? '확인' : '미확인', p.consent.date, p.selfHelpGroup, S().lastRecordDate(p.id), ...PPP.STEPS.map((s) => (p.steps[s.key].done ? p.steps[s.key].date || '완료' : ''))];
+        p.consent.guardian ? '확인' : '미확인', p.consent.date, (p.services || []).join(', '), S().lastRecordDate(p.id), ...PPP.STEPS.map((s) => (p.steps[s.key].done ? p.steps[s.key].date || '완료' : ''))];
     });
     return [head, ...rows];
   }

@@ -38,7 +38,7 @@
         disabilityType: pick(types), disabilitySeverity: rnd() > 0.25 ? '심한 장애' : '심하지 않은 장애',
         manager: staff[i % staff.length], guardianRelation: pick(['모', '부', '형제자매', '모']),
         consent: i % 6 === 5 ? { guardian: false, date: '', method: '', note: '동의서 회수 예정' } : { guardian: true, date: iso(start), method: '서면', note: '' },
-        selfHelpGroup: pick(PPP.SELF_HELP_GROUPS), supportStart: iso(start), status, steps,
+        services: PPP.SERVICE_TYPES.filter(() => rnd() > 0.5), supportStart: iso(start), status, steps,
         closing: status === 'closed' ? { reason: '가상 데이터: 이사로 인한 서비스 종결', requestedBy: staff[0], requestedAt: iso(addDays(now, -20)), reviewedBy: staff[1], reviewedAt: iso(addDays(now, -18)), guardianConfirmed: true } : null,
         memo: '가상 샘플 데이터입니다.',
         createdAt: start.toISOString(), createdBy: 'sample', updatedAt: now.toISOString(), updatedBy: 'sample',

@@ -1,6 +1,6 @@
 # DATA_MODEL.md — 데이터 구조
 
-스키마 버전: **1** (`PPP.SCHEMA_VERSION`, `js/store.js`)
+스키마 버전: **2** (`PPP.SCHEMA_VERSION`, `js/store.js`)
 
 ## 1. 전체 구조
 ```
@@ -36,7 +36,7 @@ db
 | guardianRelation | string | N | 주 보호자 관계 |
 | manager | string | Y | 담당자(settings.staff) |
 | supportStart | date(YYYY-MM-DD) | Y | 지원 시작일 (3년 경과 계산) |
-| selfHelpGroup | string | Y | `PPP.SELF_HELP_GROUPS` |
+| services | string[] | Y | 미래설계서비스이용현황, `PPP.SERVICE_TYPES` 중 복수 선택 (빈 배열 = 이용 없음) |
 | consent | {guardian: bool, date, method, note} | Y | 보호자 동의 확인 |
 | status | 'active' \| 'closing' \| 'closed' \| 'linked' | Y | 진행 중/종결 검토 대기/종결/자조활동 연계 |
 | closing | {reason, guardianConfirmed, requestedBy, requestedAt, reviewedBy?, reviewedAt?} \| null | N | 종결 정보 |
@@ -122,6 +122,11 @@ stepKey: `academy, prepCounsel, familyProgram(선택), counsel, preMeeting, inte
 }
 ```
 복원: 검증 → 미리보기 → 현재 데이터 자동 백업 → `migrate()` 후 교체. 스키마 변경 시 `SCHEMA_VERSION`을 올리고 `migrate()`에 단계별 변환을 추가한다(이전 버전 백업도 복원 가능해야 함).
+
+| 버전 | 변경 | 변환 규칙 (`migrate()`) |
+|---|---|---|
+| 1 | 최초 | — |
+| 2 | `selfHelpGroup`(문자열) → `services`(문자열 배열, 미래설계서비스이용현황) | 기존 값에 ‘자조’가 포함되면 `['평생과정설계 자조모임']`, 그 외(‘없음’ 등)는 `[]`. `selfHelpGroup` 필드 삭제. 아카데미 이용 여부는 v1에 없던 정보이므로 담당자가 직접 입력해야 함 |
 
 ## 6. 서버 DB 전환 설계 (별도 설계 필요 — 초안)
 - 어댑터 인터페이스 유지: `load(): db`, `save(db)` → 서버 버전은 엔터티 단위 API로 세분화 권장.

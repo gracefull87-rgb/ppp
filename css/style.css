@@ -395,3 +395,12 @@ input:disabled { background: var(--track); }
 /* 줄바꿈 방지 보정 */
 .filters label, .ctl label { white-space: nowrap; }
 .progress-table td:first-child, .progress-table td:nth-child(2), .progress-table td:nth-child(3) { white-space: nowrap; }
+
+/* 이용자 등록·수정 폼: 모든 입력란 높이를 출생연도 입력란과 동일하게 (테두리 2px + 안쪽 여백 16px + 한 줄 높이 1.6em, 글자 크기 단계에 따라 함께 변함) */
+.form-uniform { --field-h: calc(1.6em + 18px); }
+.form-uniform input:not([type=checkbox]):not([type=radio]),
+.form-uniform select,
+.form-uniform textarea { height: var(--field-h); min-height: 0; padding-top: 8px; padding-bottom: 8px; }
+.form-uniform textarea { resize: vertical; overflow-y: auto; }
+.form-uniform .opts { min-height: var(--field-h); }
+.form-uniform .opt.big { min-height: var(--field-h); padding-top: 0; padding-bottom: 0; }

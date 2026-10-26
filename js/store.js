@@ -5,7 +5,7 @@
  */
 (function () {
   const PPP = (window.PPP = window.PPP || {});
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
   const DB_KEY = 'ppp.db.v1';
   const PREF_KEY = 'ppp.prefs';
 
@@ -275,13 +275,13 @@
     return {
       code: '', alias: '', name: '', gender: '', birthYear: '', disabilityType: '', disabilitySeverity: '',
       manager: '', guardianRelation: '', consent: { guardian: false, date: '', method: '', note: '' },
-      selfHelpGroup: '없음', supportStart: '', status: 'active', closing: null, memo: '', steps,
+      services: [], supportStart: '', status: 'active', closing: null, memo: '', steps,
     };
   }
   PPP.newParticipant = newParticipant;
 
   function migrate(db) {
-    // schemaVersion 1 이 최초 버전. 이후 버전 추가 시 여기에서 단계적으로 변환한다.
+    // 버전별 단계 변환. v1 → v2: selfHelpGroup(단일 문자열) → services(미래설계서비스이용현황, 배열)
     const base = emptyDb();
     db = Object.assign(base, db);
     db.settings = Object.assign(emptyDb().settings, db.settings || {});
@@ -289,6 +289,8 @@
       p.steps = p.steps || {};
       PPP.STEPS.forEach((s) => { if (!p.steps[s.key]) p.steps[s.key] = { done: false, date: '' }; });
       p.consent = p.consent || { guardian: false, date: '', method: '', note: '' };
+      if (!Array.isArray(p.services)) p.services = /자조/.test(p.selfHelpGroup || '') ? ['평생과정설계 자조모임'] : [];
+      delete p.selfHelpGroup;
     });
     db.schemaVersion = SCHEMA_VERSION;
     return db;
@@ -296,7 +298,7 @@
 
   const PARTICIPANT_LABELS = {
     alias: '가명(별칭)', name: '실명', gender: '성별', birthYear: '출생연도', disabilityType: '장애유형', disabilitySeverity: '장애정도',
-    manager: '담당자', guardianRelation: '보호자 관계', consent: '보호자 동의', selfHelpGroup: '자조활동', supportStart: '지원 시작일',
+    manager: '담당자', guardianRelation: '보호자 관계', consent: '보호자 동의', services: '미래설계서비스이용현황', supportStart: '지원 시작일',
     status: '상태', closing: '종결 정보', memo: '메모',
   };
   const RECORD_LABELS = { date: '일자', type: '유형', area: '영역', attendees: '참석자', content: '주요 내용', result: '결정·평가', nextPlan: '다음 계획', achievement: '달성도' };

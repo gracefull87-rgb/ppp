@@ -27,6 +27,22 @@ const check = (cond, msg) => { if (cond) console.log('  ✓', msg); else { faile
   console.log('2. 현재 사용자 선택 · 참여자 등록 검증');
   await page.selectOption('#currentUser', '담당자1');
   await page.goto(URL + '#/participants/new');
+  check((await page.textContent('nav.nav [data-nav=participants]')).trim().endsWith('이용자 관리'), '메뉴 이름: 이용자 관리');
+  const fieldHeights = () => page.evaluate(() => {
+    const ref = document.getElementById('birthYear').getBoundingClientRect().height;
+    const els = [...document.querySelectorAll('#pForm input:not([type=checkbox]):not([type=radio]), #pForm select, #pForm textarea, #pForm .opts')];
+    return { ref: Math.round(ref), diff: els.filter((e) => Math.abs(e.getBoundingClientRect().height - ref) > 0.5).map((e) => e.name || e.className) };
+  });
+  let fh = await fieldHeights();
+  check(fh.diff.length === 0, `등록 폼 입력란 높이 = 출생연도 높이(${fh.ref}px)${fh.diff.length ? ' 불일치: ' + fh.diff.join(',') : ''}`);
+  await page.click('#fontUp'); await page.click('#fontUp'); await page.click('#fontUp');
+  fh = await fieldHeights();
+  check(fh.diff.length === 0 && fh.ref > 50, `글자 크게 해도 입력란 높이 동일(${fh.ref}px)`);
+  await page.click('#fontReset');
+  check(await page.isVisible('text=미래설계서비스이용현황'), '미래설계서비스이용현황 항목 표시');
+  check((await page.$$('#pForm input[name=services]')).length === 3, '서비스 하위항목 3개');
+  await page.check('#pForm input[name=services][value="평생과정설계 보호자 아카데미"]');
+  await page.check('#pForm input[name=services][value="평생과정설계 자조모임"]');
   await page.click('button[type=submit]');
   check(await page.isVisible('.error-summary'), '필수값 누락 시 오류 요약 표시');
   await page.fill('#alias', '테스트(가명)');
@@ -40,6 +56,7 @@ const check = (cond, msg) => { if (cond) console.log('  ✓', msg); else { faile
   await page.click('button[type=submit]');
   await page.waitForSelector('.stage-board');
   check(await page.isVisible('text=테스트(가명)'), '참여자 등록 후 상세 이동');
+  check(JSON.stringify(await page.evaluate(() => window.PPP.store.db.participants[0].services)) === JSON.stringify(['평생과정설계 보호자 아카데미', '평생과정설계 자조모임']), '미래설계서비스 복수 선택 저장');
 
   console.log('3. 기록 작성 → 단계 자동 완료');
   await page.click('text=+ 기록 작성');
@@ -88,7 +105,7 @@ const check = (cond, msg) => { if (cond) console.log('  ✓', msg); else { faile
   await page.goto(URL + '#/');
   await page.waitForSelector('#chStage svg');
   check((await page.$$('.kpi')).length === 6, 'KPI 6개');
-  check((await page.$$('.donut-wrap')).length === 6, '원형 그래프 6개');
+  check((await page.$$('.donut-wrap')).length === 5, '원형 그래프 5개');
   check((await page.$$('.progress-table tbody tr')).length >= 10, '참여자 진행상황 표');
   await page.screenshot({ path: path.join(SHOTS, 'dashboard.png'), fullPage: true });
 
@@ -144,7 +161,22 @@ const check = (cond, msg) => { if (cond) console.log('  ✓', msg); else { faile
   await page.click('#fontUp');
   check(await page.evaluate(() => document.documentElement.style.fontSize) === '18px', '글자 크게');
 
-  console.log('11. 모바일 폭 가로 스크롤 없음');
+  console.log('11. 이전 버전(v1) 데이터 변환');
+  await page.evaluate(() => {
+    const db = { schemaVersion: 1, settings: { orgName: '테스트기관', staff: ['담당자1'] }, documents: [], records: [], history: [],
+      participants: [
+        { id: 'p_a', code: 'PPP-2025-001', alias: '가(가명)', selfHelpGroup: '당사자 자조활동', status: 'active', steps: {}, consent: { guardian: true, date: '2025-01-01' } },
+        { id: 'p_b', code: 'PPP-2025-002', alias: '나(가명)', selfHelpGroup: '없음', status: 'active', steps: {}, consent: { guardian: true, date: '2025-01-01' } }] };
+    localStorage.setItem('ppp.db.v1', JSON.stringify(db));
+  });
+  await page.goto(URL + '#/');
+  await page.reload();
+  await page.waitForSelector('.kpis');
+  const mig = await page.evaluate(() => window.PPP.store.db.participants.map((p) => ({ s: p.services, old: 'selfHelpGroup' in p })));
+  check(mig[0].s.join() === '평생과정설계 자조모임' && mig[1].s.length === 0 && !mig[0].old, 'v1 자조활동 → 미래설계서비스이용현황 변환');
+  check(await page.isVisible('#chService .hbar'), '대시보드 미래설계서비스 이용현황 막대');
+
+  console.log('12. 모바일 폭 가로 스크롤 없음');
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto(URL + '#/');
   await page.waitForSelector('.kpis');

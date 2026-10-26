@@ -92,7 +92,7 @@
         <section class="card"><h2 class="card-title">연령대</h2><div id="chAge"></div></section>
         <section class="card"><h2 class="card-title">성별</h2><div id="chGender"></div></section>
         <section class="card"><h2 class="card-title">실천계획 영역 <span class="muted small">(단기목표 수)</span></h2><div id="chArea"></div></section>
-        <section class="card"><h2 class="card-title">자조활동 참여</h2><div id="chGroup"></div></section>
+        <section class="card"><h2 class="card-title">미래설계서비스 이용현황 <span class="muted small">(복수 선택)</span></h2><div id="chService"></div></section>
       </div>
       <div class="grid-2">
         <section class="card"><h2 class="card-title">세부 단계별 완료 인원 <span class="muted small">(진행 중 ${active.length}명 기준)</span></h2><div id="chSteps"></div></section>
@@ -117,7 +117,9 @@
     const areaMap = new Map();
     list.forEach((p) => { const d = S().documents(p.id, 'actionPlan')[0]; if (d) (d.data.plans || []).forEach((pl) => { const k = pl.area || '미지정'; areaMap.set(k, (areaMap.get(k) || 0) + 1); }); });
     C.donut(root.querySelector('#chArea'), { title: '실천계획 영역', items: toItems(areaMap, PPP.DOMAINS), unit: '건' });
-    C.donut(root.querySelector('#chGroup'), { title: '자조활동 참여', items: toItems(count(list, (p) => p.selfHelpGroup), PPP.SELF_HELP_GROUPS) });
+    // 복수 선택 항목이라 합계가 100%가 되지 않으므로 원형이 아닌 막대로 표시
+    C.hbar(root.querySelector('#chService'), { title: '미래설계서비스 이용현황', max: list.length || 1, items: PPP.SERVICE_TYPES.map((t) => ({ label: t.replace('평생과정설계 ', ''), value: list.filter((p) => (p.services || []).includes(t)).length }))
+      .concat([{ label: '이용 없음', value: list.filter((p) => !(p.services || []).length).length }]) });
     C.hbar(root.querySelector('#chSteps'), { title: '세부 단계별 완료 인원', max: active.length || 1, items: PPP.STEPS.map((s) => ({ label: s.label, sub: s.stage + (s.optional ? '·선택' : ''), value: active.filter((x) => (x.p.steps[s.key] || {}).done).length, color: STAGE_COLORS[s.stage] })) });
     const months = [];
     for (let i = 5; i >= 0; i--) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); const k = `${d.getFullYear()}-${PPP.pad(d.getMonth() + 1)}`; months.push({ label: `${d.getMonth() + 1}월`, full: k, value: recs.filter((r) => String(r.date).startsWith(k)).length }); }
@@ -167,7 +169,7 @@
     }).sort((a, b) => a.p.code.localeCompare(b.p.code));
 
     root.innerHTML = `
-      <div class="page-head"><div><h1>참여자 관리</h1><p class="sub">전체 ${all.length}명 · 검색 결과 ${rows.length}명</p></div>
+      <div class="page-head"><div><h1>이용자 관리</h1><p class="sub">전체 ${all.length}명 · 검색 결과 ${rows.length}명</p></div>
         <div class="btn-row"><a class="btn btn-primary" href="#/participants/new">+ 참여자 등록</a></div></div>
       <form class="searchbar card" id="searchForm" role="search">
         <div class="field"><label for="sq">검색어</label><input id="sq" name="q" type="search" value="${esc(q)}" placeholder="참여자 코드, 가명, 장애유형, 담당자"></div>
@@ -200,16 +202,16 @@
     if (id && !p) return notFound(root);
     const c = p.consent || {};
     root.innerHTML = `
-      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">참여자 관리</a> › ${id ? `<a href="#/p/${p.id}">${esc(p.code)}</a> › 정보 수정` : '참여자 등록'}</nav>
+      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">이용자 관리</a> › ${id ? `<a href="#/p/${p.id}">${esc(p.code)}</a> › 정보 수정` : '참여자 등록'}</nav>
       <div class="page-head"><h1>${id ? '참여자 정보 수정' : '참여자 등록'}</h1></div>
       <div class="notice">개인정보 최소수집 원칙: 식별은 <strong>참여자 코드와 가명</strong>으로 합니다. 실명은 꼭 필요한 경우에만 입력하세요. <span class="req">*</span> 표시는 필수 항목입니다.</div>
-      <form id="pForm" class="card" novalidate>
+      <form id="pForm" class="card form-uniform" novalidate>
         <div id="pErrors" class="error-summary" role="alert" tabindex="-1" hidden></div>
         <h2 class="section-title">기본 정보</h2>
         <div class="fgrid">
-          <div class="field"><label for="code" class="flabel">참여자 코드 <span class="req">*</span></label><input id="code" name="code" value="${esc(p.code)}" required pattern="[A-Za-z0-9\\-]{3,30}" maxlength="30"><p class="fhint">자동 생성됩니다. 영문·숫자·하이픈만 사용.</p></div>
-          <div class="field"><label for="alias" class="flabel">가명(별칭) <span class="req">*</span></label><input id="alias" name="alias" value="${esc(p.alias)}" required maxlength="30" placeholder="예) 하늘"></div>
-          <div class="field"><label for="name" class="flabel">실명 <span class="badge badge-sens">민감</span></label><input id="name" name="name" value="${esc(p.name)}" maxlength="30" autocomplete="off"><p class="fhint">선택 입력. 익명 모드에서는 가려서 표시됩니다.</p></div>
+          <div class="field"><label for="code" class="flabel">참여자 코드 <span class="req">*</span></label><input type="text" id="code" name="code" value="${esc(p.code)}" required pattern="[A-Za-z0-9\\-]{3,30}" maxlength="30"><p class="fhint">자동 생성됩니다. 영문·숫자·하이픈만 사용.</p></div>
+          <div class="field"><label for="alias" class="flabel">가명(별칭) <span class="req">*</span></label><input type="text" id="alias" name="alias" value="${esc(p.alias)}" required maxlength="30" placeholder="예) 하늘"></div>
+          <div class="field"><label for="name" class="flabel">실명 <span class="badge badge-sens">민감</span></label><input type="text" id="name" name="name" value="${esc(p.name)}" maxlength="30" autocomplete="off"><p class="fhint">선택 입력. 익명 모드에서는 가려서 표시됩니다.</p></div>
           <div class="field"><fieldset class="optgroup"><legend class="flabel">성별</legend><div class="opts">${['남', '여'].map((g) => `<label class="opt"><input type="radio" name="gender" value="${g}" ${p.gender === g ? 'checked' : ''}> ${g}</label>`).join('')}</div></fieldset></div>
           <div class="field"><label for="birthYear" class="flabel">출생연도</label><input id="birthYear" name="birthYear" type="number" min="1920" max="${new Date().getFullYear()}" value="${esc(p.birthYear)}" placeholder="예) 1995"><p class="fhint">통계(연령대)에만 사용합니다. 생년월일 전체는 받지 않습니다.</p></div>
           <div class="field"><label for="disabilityType" class="flabel">장애유형</label><select id="disabilityType" name="disabilityType">${selectOpts(PPP.DISABILITY_TYPES, p.disabilityType)}</select></div>
@@ -220,14 +222,14 @@
         <div class="fgrid">
           <div class="field"><label for="manager" class="flabel">담당자 <span class="req">*</span></label><select id="manager" name="manager" required>${staffOptions(p.manager)}</select></div>
           <div class="field"><label for="supportStart" class="flabel">지원 시작일 <span class="req">*</span></label><input id="supportStart" name="supportStart" type="date" value="${esc(p.supportStart)}" required><p class="fhint">미래설계 지원 ${PPP.SUPPORT_YEARS}년(지원회의 1년, 실천 2년) 경과 알림 기준</p></div>
-          <div class="field"><label for="selfHelpGroup" class="flabel">미래설계 자조활동</label><select id="selfHelpGroup" name="selfHelpGroup">${PPP.SELF_HELP_GROUPS.map((g) => `<option ${g === p.selfHelpGroup ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select></div>
+          <div class="field wide"><fieldset class="optgroup"><legend class="flabel">미래설계서비스이용현황 <span class="muted small">(복수 선택)</span></legend><div class="opts">${PPP.SERVICE_TYPES.map((g, i) => `<label class="opt"><input type="checkbox" name="services" value="${esc(g)}" ${(p.services || []).includes(g) ? 'checked' : ''}> ${i + 1}) ${esc(g)}</label>`).join('')}</div></fieldset></div>
         </div>
         <h2 class="section-title">보호자 동의 확인</h2>
         <div class="fgrid">
           <div class="field wide"><label class="opt big"><input type="checkbox" name="consentGuardian" ${c.guardian ? 'checked' : ''}> 개인정보 수집·이용 및 서비스 참여에 대한 <strong>보호자(또는 본인) 동의를 확인</strong>했습니다.</label></div>
           <div class="field"><label for="consentDate" class="flabel">동의 확인일</label><input id="consentDate" name="consentDate" type="date" value="${esc(c.date)}"></div>
           <div class="field"><label for="consentMethod" class="flabel">동의 방법</label><select id="consentMethod" name="consentMethod">${selectOpts(['서면', '전자서명', '구두(기록 보관)', '기타'], c.method)}</select></div>
-          <div class="field"><label for="consentNote" class="flabel">비고</label><input id="consentNote" name="consentNote" value="${esc(c.note)}" maxlength="200"></div>
+          <div class="field"><label for="consentNote" class="flabel">비고</label><input type="text" id="consentNote" name="consentNote" value="${esc(c.note)}" maxlength="200"></div>
         </div>
         <div class="field wide"><label for="memo" class="flabel">메모</label><textarea id="memo" name="memo" rows="3" maxlength="2000">${esc(p.memo)}</textarea></div>
         <div class="form-actions"><a class="btn" href="${id ? '#/p/' + p.id : '#/participants'}">취소</a><button class="btn btn-primary" type="submit">${id ? '수정 저장' : '등록'}</button></div>
@@ -242,7 +244,7 @@
       const data = {
         code: v('code').toUpperCase(), alias: v('alias'), name: v('name'), gender: v('gender'), birthYear: v('birthYear'),
         disabilityType: v('disabilityType'), disabilitySeverity: v('disabilitySeverity'), guardianRelation: v('guardianRelation'),
-        manager: v('manager'), supportStart: v('supportStart'), selfHelpGroup: v('selfHelpGroup') || '없음', memo: v('memo'),
+        manager: v('manager'), supportStart: v('supportStart'), services: fd.getAll('services').filter((s) => PPP.SERVICE_TYPES.includes(s)), memo: v('memo'),
         consent: { guardian: fd.get('consentGuardian') === 'on', date: v('consentDate'), method: v('consentMethod'), note: v('consentNote') },
       };
       const errors = [];
@@ -290,7 +292,7 @@
     const alerts = alertsFor(p);
     const tabs = [['overview', '진행 단계'], ['forms', '서식'], ['records', '상담·회의·활동 기록'], ['history', '수정 이력']];
     root.innerHTML = `
-      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">참여자 관리</a> › ${esc(p.code)}</nav>
+      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">이용자 관리</a> › ${esc(p.code)}</nav>
       <div class="page-head">
         <div><h1>${esc(PPP.displayName(p))} <span class="code">${esc(p.code)}</span></h1>
           <p class="sub">${statusBadge(p.status)} ${stageBadge(pr.stage)} · 담당 ${esc(p.manager || '-')} · ${esc(p.gender || '-')} · ${esc(PPP.ageBand(p.birthYear))} · ${esc(p.disabilityType || '-')}${p.disabilitySeverity ? ` (${esc(p.disabilitySeverity)})` : ''}</p></div>
@@ -376,7 +378,7 @@
     if (p.status === 'closed') return `
       <dl class="dl"><dt>종결 사유</dt><dd>${esc(c.reason)}</dd><dt>요청</dt><dd>${esc(c.requestedBy)} · ${esc(c.requestedAt)}</dd><dt>검토 승인</dt><dd>${esc(c.reviewedBy)} · ${esc(c.reviewedAt)}</dd></dl>
       <div class="btn-row"><button class="btn" data-act="reopen">재개 (진행 중으로)</button></div>`;
-    return `<p>미래설계 자조활동으로 연계되었습니다. (${esc(p.selfHelpGroup)})</p><div class="btn-row"><button class="btn" data-act="reopen">진행 중으로 되돌리기</button><button class="btn btn-danger-outline" data-act="toRequest">종결 요청</button></div>`;
+    return `<p>미래설계 자조활동으로 연계되었습니다.${(p.services || []).length ? ` (이용 서비스: ${esc(p.services.join(', '))})` : ''}</p><div class="btn-row"><button class="btn" data-act="reopen">진행 중으로 되돌리기</button><button class="btn btn-danger-outline" data-act="toRequest">종결 요청</button></div>`;
   }
 
   function bindClosing(panel, p) {
@@ -484,7 +486,7 @@
     if (!existing && formKey === 'yearStory') { const ap = S().documents(pid, 'actionPlan')[0]; if (ap) Object.assign(data, { dream: ap.data.dream, longGoal: ap.data.longGoal, plans: (ap.data.plans || []).map((x) => ({ area: x.area, goal: x.goal, plan: x.plan })) }); }
 
     root.innerHTML = `
-      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">참여자 관리</a> › <a href="#/p/${p.id}/forms">${esc(p.code)}</a> › ${esc(form.title)}</nav>
+      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">이용자 관리</a> › <a href="#/p/${p.id}/forms">${esc(p.code)}</a> › ${esc(form.title)}</nav>
       <div class="page-head sticky-head">
         <div><h1>${esc(form.title)}</h1><p class="sub">${form.subtitle ? esc(form.subtitle) + ' · ' : ''}${esc(PPP.displayName(p))} (${esc(p.code)})${existing ? ` · 최종 수정 ${esc(PPP.fmtDateTime(existing.updatedAt))} ${esc(existing.updatedBy)}` : ' · 새 문서'}</p></div>
         <div class="btn-row"><a class="btn" href="#/p/${p.id}/forms">목록</a>${existing ? `<a class="btn" href="#/p/${p.id}/print/${formKey}/${existing.id}">PDF 출력</a>` : ''}<button class="btn btn-primary" form="docForm">저장</button></div>
@@ -569,7 +571,7 @@
     const suggested = (PPP.RECORD_TYPES.find((t) => pr.next && t.step === pr.next.key) || {}).key || '';
     const v = r || { date: PPP.today(), type: suggested, area: '', attendees: '', content: '', result: '', nextPlan: '', achievement: '' };
     root.innerHTML = `
-      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">참여자 관리</a> › <a href="#/p/${p.id}/records">${esc(p.code)}</a> › ${r ? '기록 수정' : '기록 작성'}</nav>
+      <nav class="crumbs" aria-label="현재 위치"><a href="#/participants">이용자 관리</a> › <a href="#/p/${p.id}/records">${esc(p.code)}</a> › ${r ? '기록 수정' : '기록 작성'}</nav>
       <div class="page-head"><div><h1>${r ? '기록 수정' : '상담·회의·활동 기록'}</h1><p class="sub">${esc(PPP.displayName(p))} (${esc(p.code)}) · 다음 단계: ${pr.next ? esc(pr.next.label) : '-'}</p></div></div>
       <form id="rForm" class="card" novalidate>
         <div id="rErrors" class="error-summary" role="alert" tabindex="-1" hidden></div>
@@ -578,7 +580,7 @@
           <div class="field"><label for="rtype" class="flabel">유형 <span class="req">*</span></label><select id="rtype" name="type" required>${selectOpts(PPP.RECORD_TYPES.map((t) => t.key), v.type)}</select><p class="fhint" id="rtypeHint"></p></div>
           <div class="field"><label for="rarea" class="flabel">영역</label><select id="rarea" name="area">${selectOpts(PPP.DOMAINS, v.area)}</select></div>
           <div class="field"><label for="rach" class="flabel">달성도 (활동평가)</label><select id="rach" name="achievement">${selectOpts(['1', '2', '3', '4', '5'], v.achievement)}</select><p class="fhint">1 매우 미흡 ~ 5 매우 우수</p></div>
-          <div class="field wide"><label for="ratt" class="flabel">참석자·협력자</label><input id="ratt" name="attendees" value="${esc(v.attendees)}" maxlength="300" placeholder="예) 당사자, 보호자, 담당자, 시민옹호인, 활동지원사"><p class="fhint">이름 대신 역할로 기록하는 것을 권장합니다.</p></div>
+          <div class="field wide"><label for="ratt" class="flabel">참석자·협력자</label><input type="text" id="ratt" name="attendees" value="${esc(v.attendees)}" maxlength="300" placeholder="예) 당사자, 보호자, 담당자, 시민옹호인, 활동지원사"><p class="fhint">이름 대신 역할로 기록하는 것을 권장합니다.</p></div>
           <div class="field wide"><label for="rcontent" class="flabel">주요 내용 <span class="req">*</span></label><textarea id="rcontent" name="content" rows="6" maxlength="5000" required>${esc(v.content)}</textarea></div>
           <div class="field wide"><label for="rresult" class="flabel">결정사항·평가 결과</label><textarea id="rresult" name="result" rows="4" maxlength="3000">${esc(v.result)}</textarea></div>
           <div class="field wide"><label for="rnext" class="flabel">다음 계획·세부계획 조정</label><textarea id="rnext" name="nextPlan" rows="3" maxlength="3000">${esc(v.nextPlan)}</textarea></div>
@@ -696,7 +698,7 @@
       <form id="setForm" class="card" novalidate>
         <div id="sErrors" class="error-summary" role="alert" tabindex="-1" hidden></div>
         <div class="fgrid">
-          <div class="field wide"><label for="orgName" class="flabel">기관명</label><input id="orgName" name="orgName" value="${esc(st.orgName)}" maxlength="50"></div>
+          <div class="field wide"><label for="orgName" class="flabel">기관명</label><input type="text" id="orgName" name="orgName" value="${esc(st.orgName)}" maxlength="50"></div>
           <div class="field wide"><label for="staff" class="flabel">담당자 목록 <span class="req">*</span></label><textarea id="staff" name="staff" rows="4" maxlength="500">${esc(st.staff.join('\n'))}</textarea><p class="fhint">한 줄에 한 명씩 입력합니다. 이력의 작성자와 종결 검토자로 사용됩니다.</p></div>
         </div>
         <div class="form-actions"><button class="btn btn-primary">저장</button></div>
