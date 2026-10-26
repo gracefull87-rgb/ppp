@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>평생과정설계</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#view">본문 바로가기</a>
+  <header class="topbar no-print">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">P</span>
+      <div><div class="brand-title">평생과정설계 기록관리</div><div class="brand-org" id="orgName"></div></div>
+    </div>
+    <div class="top-controls">
+      <div class="ctl"><label for="currentUser">현재 사용자</label><select id="currentUser"></select></div>
+      <button type="button" class="chip" id="anonToggle" aria-pressed="true" title="실명·연락처 등 민감정보 가리기"><span>익명 모드 켜짐</span></button>
+      <div class="font-ctl" role="group" aria-label="글자 크기 조절">
+        <button type="button" id="fontDown" aria-label="글자 작게">가-</button>
+        <button type="button" id="fontReset" aria-label="글자 크기 기본값"><span id="fontLevel">100%</span></button>
+        <button type="button" id="fontUp" aria-label="글자 크게">가+</button>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="nav no-print" aria-label="주 메뉴">
+      <a href="#/" data-nav="dashboard"><span aria-hidden="true">▦</span> 대시보드</a>
+      <a href="#/participants" data-nav="participants"><span aria-hidden="true">👤</span> 참여자 관리</a>
+      <a href="#/records" data-nav="records"><span aria-hidden="true">✎</span> 상담·활동 기록</a>
+      <a href="#/data" data-nav="data"><span aria-hidden="true">⇅</span> 데이터 관리</a>
+      <a href="#/settings" data-nav="settings"><span aria-hidden="true">⚙</span> 설정</a>
+      <div class="nav-foot">
+        <p>데이터는 이 PC 브라우저에만 저장됩니다.<br><a href="#/data">정기 백업하기</a></p>
+      </div>
+    </nav>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/schema.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="js/formEngine.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
