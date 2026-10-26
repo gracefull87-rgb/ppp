@@ -97,7 +97,7 @@ stepKey: `academy, prepCounsel, familyProgram(선택), counsel, preMeeting, inte
 | changes | {field, before, after}[] | 값은 120자 축약, 민감 필드는 “(가림)/(변경됨)” |
 최대 5,000건 보관(초과 시 오래된 것부터 제거) [확인 필요: 기관 보존 요구].
 
-## 3. 저장 정책
+## 3. 저장 정책 (로컬 모드)
 - 저장 키: `localStorage['ppp.db.v1']` (전체 DB JSON), `localStorage['ppp.prefs']` (글자 크기·익명 모드·현재 사용자 — 기기별 편의 설정)
 - 모든 변경은 즉시 전체 저장. 실패(용량 초과·차단) 시 오류 토스트.
 - 한계: 기기·브라우저별 분리, 자동 동기화 없음, 암호화 없음, 다중 사용자 권한 없음, 약 5MB.
@@ -128,8 +128,28 @@ stepKey: `academy, prepCounsel, familyProgram(선택), counsel, preMeeting, inte
 | 1 | 최초 | — |
 | 2 | `selfHelpGroup`(문자열) → `services`(문자열 배열, 미래설계서비스이용현황) | 기존 값에 ‘자조’가 포함되면 `['평생과정설계 자조모임']`, 그 외(‘없음’ 등)는 `[]`. `selfHelpGroup` 필드 삭제. 아카데미 이용 여부는 v1에 없던 정보이므로 담당자가 직접 입력해야 함 |
 
-## 6. 서버 DB 전환 설계 (별도 설계 필요 — 초안)
-- 어댑터 인터페이스 유지: `load(): db`, `save(db)` → 서버 버전은 엔터티 단위 API로 세분화 권장.
-- 제안 API(초안): `GET/POST/PATCH /api/participants`, `/api/documents`, `/api/records`, `GET /api/history?participantId=`, `POST /api/backup`
-- 제안 저장소: Vercel Postgres / Supabase 등 [확인 필요: 기관 정보보호 정책, 국내 리전 요구 여부]
-- 필수 추가: 로그인(담당자 계정), 역할 권한, 전송·저장 암호화, 서버 측 감사로그, 동시 수정 충돌 처리(updatedAt 비교)
+## 6. Supabase 서버 DB (서버 모드)
+스키마: `supabase/migrations/20261026000000_init.sql` · 검증: `bash tests/db/run.sh`
+
+`js/config.js`에 Supabase URL·anon 키가 있으면 서버 모드로 동작한다(`PPP.supa.ServerAdapter`). 앱 객체는 그대로 `data`(jsonb)에 저장하고, 무결성·권한에 필요한 값만 컬럼으로 둔다.
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| profiles | id(=auth.users.id), display_name, role(staff/admin), active | Auth 사용자 생성 시 **비활성**으로 자동 생성 |
+| settings | id=1, org_name | 1행 고정 |
+| participants | id, code(고유), data, status(생성 컬럼), closing_requested_by, created/updated_at·by | `code = data.code`, `id = data.id` CHECK |
+| documents | id, participant_id(FK, cascade), form_key, year(생성 컬럼), data | (participant_id, form_key, year) 고유 → 연도별 서식 중복 방지 |
+| records | id, participant_id(FK, cascade), record_date, type, data | 컬럼과 data 일치 CHECK |
+| history | id, participant_id(FK 없음), at, actor, data | 추가만 가능, at·actor 서버 강제 |
+| audit_log | table_name, row_id, action, actor, at, old_data, new_data | 트리거 자동 기록, 관리자만 열람 |
+
+### 동기화 방식
+- 로그인 시 전체를 불러와(이력은 최근 5,000건) 메모리에서 사용하고, 저장할 때마다 마지막 서버 상태와 비교해 **바뀐 행만** 전송한다.
+- 수정은 `updated_at` 일치 조건으로 보낸다. 그 사이 다른 담당자가 같은 행을 수정했다면 0행이 갱신되어 **저장 실패(충돌)** 로 안내하고 덮어쓰지 않는다 → [다시 불러오기] 후 재입력.
+- 작성자·시각(`created_by/updated_by/at/actor`)은 서버 트리거가 기록하며, 화면의 작성자 이름도 서버 값으로 표시한다.
+- 다른 담당자의 변경은 [다시 불러오기] 또는 재로그인 시 반영된다(실시간 구독 없음).
+
+### 서버 모드 삭제·복원
+- 이용자 삭제: 관리자만(RLS). 서식·기록 삭제: 직원 가능, 삭제 전 내용은 audit_log 에 보존.
+- 백업 가져오기(관리자): 서버 데이터를 파일 내용으로 교체(파일에 없는 이용자 삭제). 기존 이력은 삭제되지 않으며, 가져온 이력의 시각·작성자는 가져온 시점·관리자로 기록된다(원래 값은 data 안에 보존).
+- 전체 초기화·가상 샘플 데이터: 서버 모드에서는 사용할 수 없다.

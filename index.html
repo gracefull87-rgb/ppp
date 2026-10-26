@@ -12,10 +12,16 @@
   <header class="topbar no-print">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">P</span>
-      <div><div class="brand-title">평생과정설계 기록관리</div><div class="brand-org" id="orgName"></div></div>
+      <div><div class="brand-title">평생과정설계 기록관리</div><div class="brand-org" id="brandOrg"></div></div>
     </div>
     <div class="top-controls">
-      <div class="ctl"><label for="currentUser">현재 사용자</label><select id="currentUser"></select></div>
+      <div class="ctl ctl-local"><label for="currentUser">현재 사용자</label><select id="currentUser"></select></div>
+      <div class="ctl ctl-server">
+        <span id="syncStatus" class="sync" data-state="ok" role="status" aria-live="polite"><span class="sync-dot" aria-hidden="true"></span><span class="sync-text">서버에 저장됨</span></span>
+        <button type="button" class="chip" id="reloadBtn" title="다른 담당자가 바꾼 내용을 불러옵니다">다시 불러오기</button>
+        <span id="serverUser" class="server-user"></span>
+        <button type="button" class="chip" id="logoutBtn">로그아웃</button>
+      </div>
       <button type="button" class="chip" id="anonToggle" aria-pressed="true" title="실명·연락처 등 민감정보 가리기"><span>익명 모드 켜짐</span></button>
       <div class="font-ctl" role="group" aria-label="글자 크기 조절">
         <button type="button" id="fontDown" aria-label="글자 작게">가-</button>
@@ -32,16 +38,19 @@
       <a href="#/data" data-nav="data"><span aria-hidden="true">⇅</span> 데이터 관리</a>
       <a href="#/settings" data-nav="settings"><span aria-hidden="true">⚙</span> 설정</a>
       <div class="nav-foot">
-        <p>데이터는 이 PC 브라우저에만 저장됩니다.<br><a href="#/data">정기 백업하기</a></p>
+        <p class="only-local">데이터는 이 PC 브라우저에만 저장됩니다.<br><a href="#/data">정기 백업하기</a></p>
+        <p class="only-server">Supabase 서버에 저장됩니다.<br>사용 후 반드시 로그아웃하세요.</p>
       </div>
     </nav>
     <main id="view" tabindex="-1"></main>
   </div>
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
+  <script src="js/config.js"></script>
   <script src="js/util.js"></script>
   <script src="js/schema.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/sample.js"></script>
   <script src="js/formEngine.js"></script>
   <script src="js/charts.js"></script>

@@ -14,24 +14,30 @@
 ## 3. 기술 스택
 - HTML + CSS + JavaScript (프레임워크·빌드 도구 없음, 외부 CDN 없음)
 - 클래식 `<script>` + 전역 네임스페이스 `window.PPP` — `index.html`을 더블클릭(file://)해도 동작해야 하므로 ES 모듈을 쓰지 않는다.
-- 저장: `PPP.store.adapter` (현재 `LocalStorageAdapter`). 서버 DB는 같은 인터페이스(`load()`, `save(db)`)의 어댑터로 교체한다 — DATA_MODEL.md §6.
+- 저장: `PPP.store.adapter` — `js/config.js`가 비어 있으면 `LocalStorageAdapter`, Supabase URL·anon 키가 있으면 `PPP.supa.ServerAdapter`(서버 모드). DATA_MODEL.md §6.
+- 서버: Supabase (Auth + PostgREST, **supabase-js 미사용**, `fetch`로 직접 호출). 스키마·RLS는 `supabase/migrations/*.sql`
 - 배포: Vercel 정적 호스팅 (`vercel.json`에 보안 헤더)
-- 테스트: Playwright E2E (`node tests/e2e.cjs`)
+- 테스트: Playwright E2E (`node tests/e2e.cjs`, `node tests/e2e-server.cjs`), DB RLS (`bash tests/db/run.sh`)
 
 ## 4. 파일 구조
 ```
 index.html            앱 셸(상단바·메뉴·#view)
+js/config.js          Supabase URL·anon 키 (비우면 로컬 모드)
 css/style.css         테마(블루·화이트), 반응형, 인쇄(@media print)
 js/util.js            공통 유틸(이스케이프, 날짜, 마스킹, 토스트, 확인창, 다운로드)
 js/schema.js          업무 단계(STEPS), 기록 유형, 영역, 서식 3종 스키마
 js/store.js           저장소 어댑터, CRUD, 수정 이력, 진행률 계산, 백업 검증·복원
+js/supabase.js        Supabase 인증·REST 호출, ServerAdapter(변경분 동기화·충돌 차단)
 js/sample.js          가상 샘플 데이터 생성
 js/formEngine.js      스키마 → 입력 화면/출력 화면 렌더링, 수집, 검증
 js/charts.js          SVG 도넛·막대 차트 (범례·표 보기·툴팁)
 js/export.js          백업(JSON), CSV(UTF-8 BOM), 엑셀(.xls SpreadsheetML)
 js/views.js           화면: 대시보드, 참여자, 상세, 서식, 출력, 기록, 데이터 관리, 설정
 js/app.js             라우터(hash), 글자 크기·익명 모드·현재 사용자
-tests/e2e.cjs         E2E 스모크 테스트
+tests/e2e.cjs         E2E 스모크 테스트 (로컬 모드)
+tests/e2e-server.cjs  E2E (서버 모드, 가짜 Supabase API)
+tests/db/             RLS 검증 (임시 PostgreSQL + Supabase 최소 환경)
+supabase/migrations/  Supabase 스키마·RLS·트리거
 vercel.json           배포 설정·보안 헤더
 ```
 
@@ -46,6 +52,8 @@ vercel.json           배포 설정·보안 헤더
 
 ## 6. 금지사항
 - 실제 이용자 개인정보를 코드·샘플·테스트·이슈·커밋 메시지에 포함
+- service_role/secret 키를 코드·설정·문서에 포함, RLS 비활성화, `anon` 역할에 테이블 권한 부여
+- 새 테이블을 만들면서 RLS 활성화·정책·`tests/db/rls_test.sql` 검증을 빠뜨리는 것
 - 외부 CDN·분석 스크립트·추적 코드 추가 (CSP가 `'self'`만 허용)
 - 사진·주민등록번호 등 고위험 정보 저장 기능 추가 (사진은 출력본에 직접 부착)
 - 수정 이력 삭제·우회 기능, 종결 검토 단계 생략
@@ -53,7 +61,8 @@ vercel.json           배포 설정·보안 헤더
 - 확인되지 않은 법령·지침을 단정적으로 표기
 
 ## 7. 완료 기준 (Definition of Done)
-- [ ] `node tests/e2e.cjs` 전체 통과, 브라우저 콘솔 오류 없음
+- [ ] `node tests/e2e.cjs`·`node tests/e2e-server.cjs` 전체 통과, 브라우저 콘솔 오류 없음
+- [ ] DB 변경 시 새 마이그레이션 파일 추가(기존 파일 수정 금지) + `bash tests/db/run.sh` 통과
 - [ ] 새 기능에 대한 E2E 확인 항목 추가
 - [ ] 키보드만으로 기능 수행 가능, 포커스 표시 확인
 - [ ] 1440px(PC)과 390px 폭에서 가로 스크롤 없음
@@ -67,5 +76,5 @@ vercel.json           배포 설정·보안 헤더
 | 서식 항목·업무 단계·기록 유형 | FEATURES.md, DATA_MODEL.md, (필요 시) PROJECT_SPEC.md |
 | 데이터 구조·스키마 버전 | DATA_MODEL.md (`SCHEMA_VERSION` 증가 + `migrate()` 작성) |
 | 화면·메뉴·문구 규칙 | UI_UX.md |
-| 개인정보·저장·내보내기 | SECURITY.md, README.md |
+| 개인정보·저장·내보내기·RLS·인증 | SECURITY.md, README.md, (DB 변경 시) DATA_MODEL.md §6 |
 | 일정·우선순위 | DEVELOPMENT_PLAN.md |

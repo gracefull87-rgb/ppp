@@ -1,7 +1,7 @@
 /* 데이터 저장소
- * StorageAdapter 인터페이스: load() → db|null, save(db) → void
- * 현재 구현: LocalStorageAdapter (브라우저 로컬 저장, 기기별 분리 · 암호화/동기화/권한관리 없음)
- * 서버 DB 전환 시 같은 인터페이스의 ServerAdapter를 구현해 PPP.store.adapter 를 교체한다 (DATA_MODEL.md 참고).
+ * StorageAdapter 인터페이스: load() → db|null, save(db) → void | Promise, (선택) snapshot(db)
+ * - LocalStorageAdapter: 브라우저 로컬 저장 (기기별 분리 · 암호화/동기화/권한관리 없음)
+ * - PPP.supa.ServerAdapter: Supabase 서버 DB (js/supabase.js, config.js 에 URL·키가 있을 때)
  */
 (function () {
   const PPP = (window.PPP = window.PPP || {});
@@ -46,10 +46,11 @@
     db: null,
     available: true,
 
-    init() {
+    // preloaded: 서버 모드에서 비동기로 불러온 db
+    init(preloaded) {
       try {
-        this.db = this.adapter.load() || emptyDb();
-        this.db = migrate(this.db);
+        this.db = migrate(preloaded || this.adapter.load() || emptyDb());
+        if (this.adapter.snapshot) this.adapter.snapshot(this.db);
       } catch (e) {
         console.error(e);
         this.available = false;
@@ -60,7 +61,15 @@
 
     persist() {
       try {
-        this.adapter.save(this.db);
+        const result = this.adapter.save(this.db);
+        if (result && result.then) {
+          // 서버 모드: 화면은 즉시 갱신하고 전송은 백그라운드에서 진행
+          result.catch((e) => {
+            console.error(e);
+            PPP.toast(`서버에 저장하지 못했습니다: ${e.message}`, 'error');
+            if (e.status === 401 && PPP.onSessionExpired) PPP.onSessionExpired();
+          });
+        }
         return true;
       } catch (e) {
         console.error(e);
@@ -69,7 +78,10 @@
       }
     },
 
-    user() { return prefs.get().currentUser || '미지정'; },
+    user() {
+      if (PPP.serverMode) return (PPP.supa.auth.profile && PPP.supa.auth.profile.display_name) || '미지정';
+      return prefs.get().currentUser || '미지정';
+    },
 
     /* ---------- 이력 ---------- */
     addHistory(entry) {
@@ -254,12 +266,14 @@
       return this.persist();
     },
     resetAll() {
+      if (PPP.serverMode) throw new Error('서버 모드에서는 전체 초기화를 할 수 없습니다.');
       this.db = emptyDb();
       this.persist();
     },
 
     /* ---------- 가상 샘플 데이터 ---------- */
     seedSample() {
+      if (PPP.serverMode) throw new Error('서버 모드에서는 가상 샘플 데이터를 추가할 수 없습니다.');
       const sample = PPP.buildSampleData();
       sample.participants.forEach((p) => this.db.participants.push(p));
       sample.documents.forEach((d) => this.db.documents.push(d));

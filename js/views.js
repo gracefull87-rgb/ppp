@@ -41,9 +41,9 @@
     const mgr = params.get('m') || '';
     const list = all.filter((p) => !mgr || p.manager === mgr);
     if (!all.length) {
-      root.innerHTML = `<div class="page-head"><h1>대시보드</h1></div>` + empty('등록된 참여자가 없습니다', '참여자를 등록하면 진행상황과 통계가 이곳에 표시됩니다.<br>먼저 둘러보려면 가상 샘플 데이터를 불러올 수 있습니다.',
-        `<div class="btn-row center"><a class="btn btn-primary" href="#/participants/new">참여자 등록</a><button class="btn" id="seedBtn">가상 샘플 데이터 불러오기</button></div>`);
-      root.querySelector('#seedBtn').onclick = () => { S().seedSample(); PPP.toast('가상 샘플 데이터를 불러왔습니다.'); PPP.router.render(); };
+      root.innerHTML = `<div class="page-head"><h1>대시보드</h1></div>` + empty('등록된 참여자가 없습니다', `참여자를 등록하면 진행상황과 통계가 이곳에 표시됩니다.${PPP.serverMode ? '' : '<br>먼저 둘러보려면 가상 샘플 데이터를 불러올 수 있습니다.'}`,
+        `<div class="btn-row center"><a class="btn btn-primary" href="#/participants/new">참여자 등록</a>${PPP.serverMode ? '' : '<button class="btn" id="seedBtn">가상 샘플 데이터 불러오기</button>'}</div>`);
+      if (!PPP.serverMode) root.querySelector('#seedBtn').onclick = () => { S().seedSample(); PPP.toast('가상 샘플 데이터를 불러왔습니다.'); PPP.router.render(); };
       return;
     }
     const prog = list.map((p) => ({ p, pr: S().progress(p), alerts: alertsFor(p) }));
@@ -639,34 +639,45 @@
   /* ======================= 데이터 관리 ======================= */
   function dataPage(root) {
     const db = S().db;
+    const server = PPP.serverMode;
+    const admin = server && PPP.supa.isAdmin();
+    const restoreCard = !server
+      ? `<section class="card"><h2 class="card-title">복원</h2>
+          <p class="fhint">백업 파일을 선택하면 검증 결과를 먼저 보여 줍니다. 복원하면 현재 데이터가 <strong>모두 교체</strong>되며, 복원 직전 데이터는 자동으로 백업 파일로 내려받습니다.</p>
+          <label class="btn" for="restoreFile">백업 파일 선택</label><input type="file" id="restoreFile" accept=".json,application/json" class="sr-only">
+          <div id="restorePreview" aria-live="polite"></div></section>`
+      : admin
+        ? `<section class="card"><h2 class="card-title">백업 가져오기 (관리자)</h2>
+          <p class="fhint">로컬 모드에서 만든 백업을 서버로 옮기거나 서버 백업을 되돌릴 때 사용합니다. <strong>서버의 이용자·서식·기록이 파일 내용으로 교체</strong>되며(파일에 없는 이용자는 삭제), 삭제된 내용은 감사로그에 남습니다. 가져오기 직전 서버 데이터는 자동으로 백업 파일로 내려받습니다.</p>
+          <label class="btn" for="restoreFile">백업 파일 선택</label><input type="file" id="restoreFile" accept=".json,application/json" class="sr-only">
+          <div id="restorePreview" aria-live="polite"></div></section>`
+        : `<section class="card"><h2 class="card-title">복원</h2><p class="fhint">서버 모드에서 백업 가져오기는 관리자 계정만 할 수 있습니다.</p></section>`;
     root.innerHTML = `<div class="page-head"><div><h1>데이터 관리</h1><p class="sub">저장 방식: ${esc(S().adapter.name)}</p></div></div>
-      <div class="notice notice-warn"><strong>로컬 저장의 한계</strong> — 데이터는 <strong>이 PC의 이 브라우저</strong>에만 저장됩니다. 다른 PC·브라우저와 자동 동기화되지 않고, 암호화·사용자별 권한관리가 없으며, 브라우저 데이터 삭제 시 함께 지워집니다. <strong>정기적으로(최소 주 1회) 백업</strong>하고 백업 파일은 접근이 제한된 기관 저장소에 보관하세요.</div>
+      ${server ? `<div class="notice"><strong>Supabase 서버 저장</strong> — 로그인한 활성 직원만 데이터에 접근할 수 있으며(RLS), 모든 변경은 서버 감사로그에 남습니다. 서버 장애·실수에 대비해 정기적으로 백업 파일도 내려받아 접근이 제한된 기관 저장소에 보관하세요.</div>` : `<div class="notice notice-warn"><strong>로컬 저장의 한계</strong> — 데이터는 <strong>이 PC의 이 브라우저</strong>에만 저장됩니다. 다른 PC·브라우저와 자동 동기화되지 않고, 암호화·사용자별 권한관리가 없으며, 브라우저 데이터 삭제 시 함께 지워집니다. <strong>정기적으로(최소 주 1회) 백업</strong>하고 백업 파일은 접근이 제한된 기관 저장소에 보관하세요.</div>`}
       <div class="grid-2">
         <section class="card"><h2 class="card-title">백업</h2>
           <p>현재 데이터: 참여자 ${db.participants.length}명 · 서식 ${db.documents.length}건 · 기록 ${db.records.length}건 · 이력 ${db.history.length}건</p>
           <p class="fhint">백업 파일(JSON)에는 민감정보가 포함됩니다. 이메일·메신저로 전송하지 마세요.</p>
           <button class="btn btn-primary" id="backupBtn">백업 파일 다운로드</button></section>
-        <section class="card"><h2 class="card-title">복원</h2>
-          <p class="fhint">백업 파일을 선택하면 검증 결과를 먼저 보여 줍니다. 복원하면 현재 데이터가 <strong>모두 교체</strong>되며, 복원 직전 데이터는 자동으로 백업 파일로 내려받습니다.</p>
-          <label class="btn" for="restoreFile">백업 파일 선택</label><input type="file" id="restoreFile" accept=".json,application/json" class="sr-only">
-          <div id="restorePreview" aria-live="polite"></div></section>
+        ${restoreCard}
         <section class="card"><h2 class="card-title">엑셀·CSV 내보내기</h2>
           <label class="opt"><input type="checkbox" id="incSensitive"> 실명 포함 (기본: 제외, 비식별)</label>
           <div class="btn-row mt"><button class="btn" data-export="xls">엑셀(.xls) — 전체 시트</button><button class="btn" data-export="participants">CSV — 참여자 현황</button><button class="btn" data-export="records">CSV — 기록</button><button class="btn" data-export="plans">CSV — 실천계획</button></div>
           <p class="fhint">CSV는 UTF-8(BOM)으로 저장되어 엑셀에서 한글이 깨지지 않습니다.</p></section>
-        <section class="card"><h2 class="card-title">샘플·초기화</h2>
+        ${server ? '' : `<section class="card"><h2 class="card-title">샘플·초기화</h2>
           <p class="fhint">가상 샘플 데이터는 시연·교육용이며 실제 이용자 정보가 아닙니다.</p>
-          <div class="btn-row"><button class="btn" id="seedBtn">가상 샘플 데이터 추가</button><button class="btn btn-danger-outline" id="resetBtn">전체 데이터 초기화</button></div></section>
+          <div class="btn-row"><button class="btn" id="seedBtn">가상 샘플 데이터 추가</button><button class="btn btn-danger-outline" id="resetBtn">전체 데이터 초기화</button></div></section>`}
       </div>`;
     root.querySelector('#backupBtn').onclick = () => { PPP.exporter.backup(); PPP.toast('백업 파일을 내려받았습니다.'); };
-    root.querySelector('#seedBtn').onclick = () => { S().seedSample(); PPP.toast('가상 샘플 데이터를 추가했습니다.'); PPP.router.render(); };
-    root.querySelector('#resetBtn').onclick = async () => {
+    root.querySelectorAll('[data-export]').forEach((b) => (b.onclick = () => { PPP.exporter.run(b.dataset.export, root.querySelector('#incSensitive').checked); PPP.toast('파일을 내려받았습니다.'); }));
+    if (!server) root.querySelector('#seedBtn').onclick = () => { S().seedSample(); PPP.toast('가상 샘플 데이터를 추가했습니다.'); PPP.router.render(); };
+    if (!server) root.querySelector('#resetBtn').onclick = async () => {
       if (!(await PPP.confirmDialog('모든 참여자·서식·기록·이력을 삭제합니다.\n초기화 전에 현재 데이터가 백업 파일로 다운로드됩니다.', { title: '전체 초기화', danger: true, ok: '백업 후 초기화' }))) return;
       PPP.exporter.backup('초기화전');
       S().resetAll(); PPP.toast('전체 데이터를 초기화했습니다.'); PPP.router.render();
     };
-    root.querySelectorAll('[data-export]').forEach((b) => (b.onclick = () => { PPP.exporter.run(b.dataset.export, root.querySelector('#incSensitive').checked); PPP.toast('파일을 내려받았습니다.'); }));
-    root.querySelector('#restoreFile').onchange = (e) => {
+    const restoreInput = root.querySelector('#restoreFile');
+    if (restoreInput) restoreInput.onchange = (e) => {
       const file = e.target.files[0];
       const box = root.querySelector('#restorePreview');
       if (!file) return;
@@ -682,7 +693,14 @@
         box.querySelector('#doRestore').onclick = async () => {
           if (!(await PPP.confirmDialog('현재 데이터를 백업 파일 내용으로 교체합니다.\n복원 직전 데이터는 자동으로 다운로드됩니다.', { title: '복원', danger: true, ok: '복원' }))) return;
           PPP.exporter.backup('복원전');
-          if (S().restore(obj)) { PPP.toast('복원을 완료했습니다.'); location.hash = '#/'; }
+          if (!S().restore(obj)) return;
+          if (server) {
+            const a = PPP.supa.ServerAdapter;
+            PPP.toast('서버로 전송 중입니다. 완료될 때까지 창을 닫지 마세요.', 'warn');
+            await a.queue;
+            if (a.failed.size) { PPP.toast(`일부 항목(${a.failed.size}건)을 서버에 저장하지 못했습니다. 상단 저장 상태를 확인하세요.`, 'error'); return; }
+          }
+          PPP.toast('복원을 완료했습니다.'); location.hash = '#/';
         };
       };
       reader.onerror = () => { box.innerHTML = '<div class="notice notice-error">파일을 읽는 중 오류가 발생했습니다.</div>'; };
@@ -694,18 +712,20 @@
   /* ======================= 설정 ======================= */
   function settingsPage(root) {
     const st = S().db.settings;
+    const server = PPP.serverMode;
+    const canEditOrg = !server || PPP.supa.isAdmin();
     root.innerHTML = `<div class="page-head"><h1>설정</h1></div>
       <form id="setForm" class="card" novalidate>
         <div id="sErrors" class="error-summary" role="alert" tabindex="-1" hidden></div>
         <div class="fgrid">
-          <div class="field wide"><label for="orgName" class="flabel">기관명</label><input type="text" id="orgName" name="orgName" value="${esc(st.orgName)}" maxlength="50"></div>
-          <div class="field wide"><label for="staff" class="flabel">담당자 목록 <span class="req">*</span></label><textarea id="staff" name="staff" rows="4" maxlength="500">${esc(st.staff.join('\n'))}</textarea><p class="fhint">한 줄에 한 명씩 입력합니다. 이력의 작성자와 종결 검토자로 사용됩니다.</p></div>
+          <div class="field wide"><label for="orgName" class="flabel">기관명</label><input type="text" id="orgName" name="orgName" value="${esc(st.orgName)}" maxlength="50" ${canEditOrg ? '' : 'readonly aria-readonly="true"'}>${canEditOrg ? '' : '<p class="fhint">기관명은 관리자만 변경할 수 있습니다.</p>'}</div>
+          <div class="field wide"><label for="staff" class="flabel">담당자 목록 <span class="req">*</span></label><textarea id="staff" name="staff" rows="4" maxlength="500" ${server ? 'readonly aria-readonly="true"' : ''}>${esc(st.staff.join('\n'))}</textarea><p class="fhint">${server ? '서버 모드에서는 Supabase에서 활성화된 직원 계정 이름으로 자동 구성됩니다. 계정 추가·비활성화는 관리자가 Supabase에서 합니다.' : '한 줄에 한 명씩 입력합니다. 이력의 작성자와 종결 검토자로 사용됩니다.'}</p></div>
         </div>
-        <div class="form-actions"><button class="btn btn-primary">저장</button></div>
+        ${canEditOrg ? '<div class="form-actions"><button class="btn btn-primary">저장</button></div>' : ''}
       </form>
       <section class="card"><h2 class="card-title">사용 안내</h2>
         <ul class="guide">
-          <li>상단 <strong>현재 사용자</strong>를 본인으로 선택하고 작업하세요. 수정 이력과 종결 검토에 사용됩니다. (로그인 기능이 아니므로 권한 통제는 되지 않습니다.)</li>
+          ${server ? '<li>로그인한 직원 계정이 수정 이력·종결 검토의 작성자로 서버에 기록됩니다. 사용 후 <strong>로그아웃</strong>하세요.</li><li>다른 담당자가 바꾼 내용은 상단 <strong>다시 불러오기</strong>로 가져옵니다. 같은 항목을 동시에 수정하면 나중에 저장한 쪽이 거부되어 덮어쓰기를 막습니다.</li>' : '<li>상단 <strong>현재 사용자</strong>를 본인으로 선택하고 작업하세요. 수정 이력과 종결 검토에 사용됩니다. (로그인 기능이 아니므로 권한 통제는 되지 않습니다.)</li>'}
           <li><strong>익명 모드</strong>가 켜져 있으면 실명·연락처 등 민감정보가 화면과 출력물에서 가려집니다.</li>
           <li>글자 크기는 상단 <strong>가-/가/가+</strong> 버튼으로 조절합니다.</li>
           <li>업무 흐름: 준비(아카데미·준비상담) → 계획(상담→사전→통합→컨퍼런스→확정회의→단기계획) → 실천(세부계획·실천활동·활동평가) → 평가(연 1회).</li>
@@ -713,7 +733,7 @@
     const form = root.querySelector('#setForm');
     form.onsubmit = (e) => {
       e.preventDefault();
-      const staff = form.staff.value.split('\n').map((s) => s.trim()).filter(Boolean);
+      const staff = server ? st.staff : form.staff.value.split('\n').map((s) => s.trim()).filter(Boolean);
       const errs = [];
       if (!staff.length) errs.push(['staff', '담당자를 한 명 이상 입력하세요.']);
       if (new Set(staff).size !== staff.length) errs.push(['staff', '같은 이름이 중복되었습니다.']);

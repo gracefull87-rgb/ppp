@@ -404,3 +404,25 @@ input:disabled { background: var(--track); }
 .form-uniform textarea { resize: vertical; overflow-y: auto; }
 .form-uniform .opts { min-height: var(--field-h); }
 .form-uniform .opt.big { min-height: var(--field-h); padding-top: 0; padding-bottom: 0; }
+
+/* ---------- 서버 모드 (Supabase) ---------- */
+.ctl-server, .only-server { display: none; }
+.server-mode .ctl-server { display: flex; }
+.server-mode .only-server { display: block; }
+.server-mode .ctl-local, .server-mode .only-local { display: none; }
+.server-user { font-weight: 700; white-space: nowrap; }
+.sync { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; white-space: nowrap; }
+.sync-dot { width: 10px; height: 10px; border-radius: 50%; background: #5fd38d; }
+.sync[data-state="busy"] .sync-dot { background: #ffd166; }
+.sync[data-state="error"] .sync-dot { background: #ff6b6b; }
+.sync[data-state="error"] { font-weight: 700; }
+body.gate .nav, body.gate .top-controls { display: none; }
+body.gate .layout { grid-template-columns: 1fr; }
+.login-wrap { min-height: 70vh; display: grid; place-items: center; }
+.login-card { width: min(440px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.login-card h1 { font-size: 1.35rem; color: var(--blue-900); }
+.login-brand { display: flex; gap: 12px; align-items: center; }
+.login-brand .brand-mark { background: var(--blue-800); color: #fff; }
+.login-brand .sub { margin: 2px 0 0; color: var(--ink-3); }
+.login-btn { width: 100%; min-height: 46px; }
+input[type=email], input[type=password] { font: inherit; color: var(--ink); background: #fff; border: 1px solid #b9c2ce; border-radius: 6px; padding: 8px 10px; width: 100%; min-height: 40px; }

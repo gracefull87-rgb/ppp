@@ -2,7 +2,9 @@
 
 노원구장애인가족지원센터 **평생과정설계(PPP) 지원사업**의 참여자 진행상황, 서식, 상담·회의·활동 기록을 관리하는 웹앱입니다.
 
-> ⚠️ 현재 버전은 **브라우저 로컬 저장** 방식입니다. 데이터는 사용하는 PC의 해당 브라우저에만 저장되며, 다른 PC와 자동 동기화되지 않고 암호화·사용자별 권한관리가 없습니다. 반드시 정기적으로 백업하세요. (서버 DB 전환은 DEVELOPMENT_PLAN.md 2단계)
+> 저장 방식은 두 가지입니다.
+> - **서버 모드 (Supabase, 권장)**: `js/config.js`에 Supabase 주소·키를 넣으면 직원 계정 로그인 후 서버 DB에 저장됩니다. 모든 테이블에 RLS(행 수준 보안)가 적용됩니다. → 아래 [Supabase 연결](#supabase-연결-서버-모드)
+> - **로컬 모드**: 설정이 비어 있으면 이 PC 브라우저에만 저장합니다(동기화·암호화·권한관리 없음, 정기 백업 필수).
 
 ## 대상 사용자
 - 평생과정설계 담당 사회복지사 3명 (기관 PC, PC 화면 우선)
@@ -37,8 +39,57 @@ npx serve .          # 또는 python3 -m http.server 8080
 2. 배포 후 URL로 접속합니다. `vercel.json`이 보안 헤더(CSP 등)와 검색엔진 차단을 설정합니다.
 > ⚠️ 공개 URL에는 로그인 기능이 없습니다. 데이터는 접속한 브라우저에만 저장되므로 서버로 전송되지는 않지만, **Vercel 비밀번호 보호(Deployment Protection) 등 접근 제한 설정 여부는 [확인 필요]** 입니다.
 
+## Supabase 연결 (서버 모드)
+### 1) 프로젝트 만들기
+1. https://supabase.com 에서 새 프로젝트 생성 (리전·요금제는 기관 정책 확인 [확인 필요])
+2. **Authentication > Sign In / Providers** 에서 *Allow new users to sign up* 을 **끕니다** (계정은 관리자만 발급)
+
+### 2) 스키마·RLS 적용
+**SQL Editor** 에 `supabase/migrations/20261026000000_init.sql` 전체를 붙여 넣고 실행합니다. (CLI 사용 시 `supabase db push`)
+→ 테이블 7개, RLS 정책, 트리거, 감사로그가 만들어집니다.
+
+### 3) 직원 계정 만들기
+1. **Authentication > Users > Add user** 로 직원 이메일·비밀번호 생성 (*Auto Confirm User* 체크)
+   - 새 계정은 자동으로 **비활성** 상태입니다. 활성화 전에는 로그인해도 아무 데이터도 볼 수 없습니다.
+2. **SQL Editor** 에서 이름·권한을 지정하고 활성화합니다.
+```sql
+-- 첫 관리자 (1~2명만)
+update public.profiles set display_name = '관리자이름', role = 'admin', active = true
+where id = (select id from auth.users where email = 'admin@기관도메인');
+
+-- 직원
+update public.profiles set display_name = '담당자1', active = true
+where id = (select id from auth.users where email = 'staff1@기관도메인');
+
+-- 퇴사·휴직 시 즉시 비활성화
+update public.profiles set active = false
+where id = (select id from auth.users where email = 'staff1@기관도메인');
+```
+> `display_name` 은 담당자 목록·수정 이력·종결 검토에 표시되는 이름입니다.
+
+### 4) 앱에 연결
+**Project Settings > API** 의 *Project URL* 과 *anon public* 키를 `js/config.js` 에 입력하고 커밋·배포합니다.
+```js
+supabaseUrl: 'https://xxxxxxxx.supabase.co',
+supabaseAnonKey: 'eyJhbGciOi...',   // anon(public) 키
+```
+- anon 키는 공개용 키입니다. 데이터는 RLS가 보호하므로 로그인·활성화된 직원만 조회할 수 있습니다.
+- ⚠️ **service_role(또는 secret) 키는 절대 넣지 마세요.** RLS를 무시하는 관리자 키입니다.
+- 사용자 정의 도메인을 쓰면 `vercel.json` CSP의 `connect-src` 에 그 주소를 추가하세요.
+
+### 5) 기존 로컬 데이터 옮기기
+1. (연결 전) 로컬 모드에서 **데이터 관리 → 백업 파일 다운로드**
+2. 서버 모드에서 **관리자 계정**으로 로그인 → **데이터 관리 → 백업 가져오기 (관리자)**
+3. 가져오기 후 대시보드 건수를 확인합니다. 가상 샘플 데이터가 섞여 있다면 가져오기 전에 로컬에서 정리하세요.
+
+### 서버 모드 사용 시 달라지는 점
+- 상단에 로그인 사용자·저장 상태(● 서버에 저장됨 / 저장 중 / 저장 실패)·**다시 불러오기**·**로그아웃** 이 표시됩니다.
+- 다른 담당자가 바꾼 내용은 **다시 불러오기** 로 가져옵니다. 같은 항목을 동시에 고치면 나중 저장이 거부되어 덮어쓰기를 막습니다.
+- 브라우저 탭을 닫거나 30분 동안 조작이 없으면 자동 로그아웃됩니다.
+- 이용자 삭제·기관명 변경·백업 가져오기는 관리자만 할 수 있고, 전체 초기화·가상 샘플 데이터는 사용할 수 없습니다.
+
 ## 사용법
-1. 상단 **현재 사용자**에서 본인을 선택합니다(수정 이력·종결 검토에 사용).
+1. 서버 모드는 직원 계정으로 로그인합니다. 로컬 모드는 상단 **현재 사용자**에서 본인을 선택합니다(수정 이력·종결 검토에 사용).
 2. **설정**에서 기관명과 담당자 목록을 확인합니다.
 3. **이용자 관리 → 참여자 등록**: 가명, 담당자, 지원 시작일, 보호자 동의를 입력합니다.
 4. 참여자 상세에서 **진행 단계**를 체크하거나, **기록 작성**으로 상담·회의를 기록하면 해당 단계가 자동 완료됩니다.
@@ -57,7 +108,9 @@ npx serve .          # 또는 python3 -m http.server 8080
 
 ## 테스트
 ```bash
-node tests/e2e.cjs     # Playwright + Chromium 필요
+node tests/e2e.cjs          # 로컬 모드 E2E (Playwright + Chromium 필요)
+node tests/e2e-server.cjs   # 서버 모드 E2E (가짜 Supabase API로 로그인·동기화·충돌 처리 검증)
+bash tests/db/run.sh        # Supabase 스키마·RLS 검증 (로컬 PostgreSQL 14+ 필요)
 ```
 
 ## 문서
